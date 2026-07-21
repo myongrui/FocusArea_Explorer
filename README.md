@@ -11,10 +11,12 @@ official [NUS SoC focus list](https://www.comp.nus.edu.sg/programmes/ug/focus/).
 Prerequisites and titles come from the [NUSMods](https://nusmods.com) API v2,
 academic year **2026–2027** (current-year only, no multi-year fallback).
 
-## Run it
+## Try it
 
-No build step, no dependencies. Just open the file:
+No install, no sign-up — it runs entirely in your browser:
+<https://myongrui.github.io/FocusArea_Explorer/>
 
+OR if you want to run it locally:
 - **Double-click `index.html`** — it opens in your browser and works fully offline.
 - Or serve the folder (nicer for dev; avoids any `file://` quirks):
   ```sh
@@ -22,7 +24,20 @@ No build step, no dependencies. Just open the file:
   python -m http.server 8000
   # then visit http://localhost:8000
   ```
+## Why this exists
 
+Planning a CS focus area at NUS means juggling two things that never sit on the same page:
+
+- The **[SoC focus-area list](https://www.comp.nus.edu.sg/programmes/ug/focus/)** tells you *which* modules count toward each area — but it's just flat text lists. It doesn't show you what you need to take *first*.
+- **[NUSMods](https://nusmods.com)** has the prerequisites — but only one module at a time. You can see the tree for `CS4231`, then the tree for `CS3230`, then try to hold both in your head.
+
+So the questions that actually matter when you're choosing an area are hard to answer:
+
+- *If I want this focus area, what's the full chain of modules I have to clear to get there?*
+- *I'm interested in two areas — do they overlap? Would one module count toward both?*
+- *Where does a course I've already taken lead?*
+
+This tool answers all three visually. Pick the areas you care about, and it draws the **whole dependency tree** at once — foundations on the left flowing right into each area's advanced modules — and it highlights the courses that do double duty across areas.
 ## Project structure
 
 ```
@@ -53,13 +68,6 @@ or hand-edited without touching the rendering code.
   `requestAnimationFrame` loop and edges (inline SVG beziers) follow each frame.
 - **Edges** — solid = required prerequisite, dashed = one of several acceptable
   options.
-
-## Colour / accessibility note
-
-Eleven categorical area colours cannot all be colour-blind-separable
-simultaneously (a known limit past ~8 categories), so **identity is carried by
-the course code on every node** and by the name+colour chips in the palette —
-colour is reinforcement, not the sole signal.
 
 ## Data notes
 
