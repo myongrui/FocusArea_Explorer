@@ -14,7 +14,7 @@ academic year **2026–2027** (current-year only, no multi-year fallback).
 ## Try it
 
 No install, no sign-up — it runs entirely in your browser:
-<https://myongrui.github.io/FocusArea_Explorer/>
+#### <https://myongrui.github.io/FocusArea_Explorer/>
 
 OR if you want to run it locally:
 - **Double-click `index.html`** — it opens in your browser and works fully offline.
