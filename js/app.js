@@ -35,7 +35,7 @@
   var nodeEls = {};          // id -> element
   var visIds = [], visEdges = [];
   var pinned = null, hovered = null;
-  var fitMode = false, lastW = 0, lastH = 0;   // fit-to-view scaling
+  var fitMode = true, lastW = 0, lastH = 0;    // fit-to-view scaling
 
   // ---- geometry constants ----
   var BW=158, BH=40, STEPX=210, STEPY=54, PADX=26, PADY=30;
@@ -200,12 +200,15 @@
   document.addEventListener("dragend", function(){ dragKey=null; });
 
   document.getElementById("btnAddCat").addEventListener("click", addCategory);
-  document.getElementById("btnFit").addEventListener("click", function(){
+  var fitBtn=document.getElementById("btnFit");
+  fitBtn.addEventListener("click", function(){
     fitMode=!fitMode;
     this.classList.toggle("on", fitMode);
     this.textContent = fitMode? "100%" : "Fit";
     applyFit();
   });
+  fitBtn.classList.toggle("on", fitMode);
+  fitBtn.textContent = fitMode? "100%" : "Fit";
   window.addEventListener("resize", function(){ if(fitMode) applyFit(); });
   document.getElementById("btnAll").addEventListener("click", function(){
     AREAS.forEach(function(a){ active[a.k]=true; }); refreshActive(); update(true);
