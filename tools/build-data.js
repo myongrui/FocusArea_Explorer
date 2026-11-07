@@ -35,8 +35,8 @@ var AREAS = [
 // The CS foundation / common core: drawn in the foundation style and shown on
 // their own when no focus area is active. Seeded into the closure so a
 // foundation module appears even when nothing in the graph requires it.
-var FOUNDATION = ["CS1101S","CS1231S","CS2030S","CS2040S","CS2100","CS2106",
-                  "MA1521","ST2334"];
+var FOUNDATION = ["CS1101S","CS1231S","CS2030S","CS2040S","CS2100","CS2101",
+                  "CS2103T","CS2106","CS2109S","CS3230","MA1521","MA1522","ST2334"];
 var SKIP = {"CS4232":1,"CS3212":1};
 
 // Hand-shortened labels kept from earlier hand-maintained data (158px wide

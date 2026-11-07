@@ -34,7 +34,7 @@
   var cur = {};              // id -> animated {x,y}
   var nodeEls = {};          // id -> element
   var visIds = [], visEdges = [];
-  var pinned = null, hovered = null;
+  var pinned = new Set(), hovered = null, completed = new Set(), inProgress = new Set(), planned = new Set(), planFocus = new Set();
   var fitMode = true, lastW = 0, lastH = 0;    // fit-to-view scaling
 
   // ---- geometry constants ----
@@ -217,17 +217,41 @@
     active={}; refreshActive(); update(true);
   });
 
+  var csOnly=document.getElementById("csOnly");
+  csOnly.addEventListener("change", function(){ update(true); });
+  var showAllLinks=document.getElementById("showAllLinks");
+  showAllLinks.addEventListener("change", drawEdges);
+  var unpinBtn=document.getElementById("btnUnpin");
+  unpinBtn.addEventListener("click", function(){ pinned.clear(); applyHighlight(); });
+  scrollEl.addEventListener("click", function(e){
+    if(e.target.closest(".node")) return;
+    pinned.clear(); applyHighlight();
+  });
+  document.addEventListener("keydown", function(e){
+    if(e.key!=="Escape") return;
+    pinned.clear(); applyHighlight();
+  });
+
   // ---------- visibility ----------
-  // Active areas' primaries, plus the transitive prerequisite closure of those
-  // primaries (so foundations and support/bridge modules pull in automatically).
-  // Empty selection shows only the foundation core as a teaser.
+  // Foundation core, active areas' primaries, and their prerequisite closure.
   function computeVisible(){
     var keys=Object.keys(active);
-    if(keys.length===0){ return {ids:FND.slice(), edges: EDGES.filter(function(e){return nodeById[e[0]].f&&nodeById[e[1]].f;}) }; }
+    var focusIds=Array.from(planFocus).filter(function(id){return nodeById[id];});
+    var plannedIds=Array.from(planned).filter(function(id){return nodeById[id];});
+    if(keys.length===0 && !focusIds.length && !plannedIds.length){ return {ids:FND.slice(), edges: EDGES.filter(function(e){return nodeById[e[0]].f&&nodeById[e[1]].f;}) }; }
     var vis={};
+    FND.forEach(function(id){ vis[id]=1; });
+    focusIds.forEach(function(id){ vis[id]=1; });
+    plannedIds.forEach(function(id){ vis[id]=1; });
     keys.forEach(function(k){ areaByKey[k].prim.forEach(function(id){ vis[id]=1; }); });
     var stack=Object.keys(vis);
-    while(stack.length){ var n=stack.pop(); inadj[n].forEach(function(p){ if(!vis[p]){ vis[p]=1; stack.push(p);} }); }
+    while(stack.length){
+      var n=stack.pop();
+      inadj[n].forEach(function(p){
+        if(csOnly.checked && !nodeById[p].f && (!p.startsWith("CS") || p==="CS1010" || p==="CS2113")) return;
+        if(!vis[p]){ vis[p]=1; stack.push(p); }
+      });
+    }
     var ids=Object.keys(vis);
     var ve=EDGES.filter(function(e){ return vis[e[0]]&&vis[e[1]]; });
     return {ids:ids, edges:ve};
@@ -314,6 +338,8 @@
   function update(animate){
     var vis=computeVisible();
     visIds=vis.ids; visEdges=vis.edges;
+    pinned.forEach(function(id){ if(visIds.indexOf(id)<0) pinned.delete(id); });
+    if(visIds.indexOf(hovered)<0) hovered=null;
     empty.style.display = Object.keys(active).length? "none":"flex";
 
     var lay=layout(visIds, visEdges);
@@ -351,6 +377,7 @@
 
     animateTo(lay.target, animate?380:0);
     applyFit();
+    applyHighlight();
   }
 
   // ---------- fit-to-view: scale the whole canvas to fit the visible pane ----------
@@ -371,6 +398,13 @@
     var el=document.createElement("div");
     el.className="node new";
     el.dataset.id=id;
+    el.draggable=true;
+    el.addEventListener("dragstart", function(e){
+      e.dataTransfer.setData("application/x-fa-module",id);
+      e.dataTransfer.setData("text/plain",id);
+      e.dataTransfer.effectAllowed="copy";
+    });
+    el.title="Hover to trace connections; click to pin or unpin; drag to the planner";
     var url="https://nusmods.com/courses/"+id;
     el.innerHTML='<div class="row1"><span class="badge"></span>'+
       '<a class="code" href="'+url+'" target="_blank" rel="noopener">'+id+'</a>'+
@@ -380,9 +414,19 @@
     cur[id]={x:tgt.x, y:tgt.y};
     el.addEventListener("mouseenter", function(){ hovered=id; applyHighlight(); });
     el.addEventListener("mouseleave", function(){ hovered=null; applyHighlight(); });
+    el.addEventListener("focusin", function(){ hovered=id; applyHighlight(); });
+    el.addEventListener("focusout", function(e){
+      if(el.contains(e.relatedTarget)) return;
+      hovered=null; applyHighlight();
+    });
     el.addEventListener("click", function(e){
       if(e.target.classList.contains("code")) return;   // let the link work
-      pinned = (pinned===id)? null : id; applyHighlight();
+      if(pinned.has(id)) pinned.delete(id);
+      else {
+        pinned.add(id);
+        document.dispatchEvent(new CustomEvent("planner:pin",{detail:{code:id}}));
+      }
+      applyHighlight();
     });
     nodeLayer.appendChild(el);
     nodeEls[id]=el;
@@ -393,6 +437,8 @@
     var el=nodeEls[id]; if(!el) return;
     var r=roleOf(id);
     el.classList.remove("k-fnd","k-support","k-primary","k-shared");
+    el.classList.toggle("completed",completed.has(id));
+    el.classList.toggle("inprogress",inProgress.has(id));
     el.style.removeProperty("--c"); el.style.removeProperty("--grad");
     var roleEl=el.querySelector(".role");
     if(r.k==="fnd"){ el.classList.add("k-fnd"); roleEl.textContent="CORE"; }
@@ -406,7 +452,23 @@
       el.style.setProperty("--c", cols[0]);
       roleEl.textContent=r.areas.length+" AREAS";
     }
+    if(completed.has(id)) roleEl.textContent="DONE";
+    else if(inProgress.has(id)) roleEl.textContent="DOING";
+    else if(planned.has(id) && r.k==="support"){
+      var node=nodeById[id];
+      if(node.a.length){el.classList.add("k-primary");el.style.setProperty("--c",areaColor(node.a[0]));}
+      roleEl.textContent="PLANNED";
+    }
   }
+  document.addEventListener("planner:status",function(e){
+    var nextPlanned=new Set(e.detail.planned||[]),nextFocus=new Set(e.detail.focus||[]);
+    function differs(a,b){return a.size!==b.size||Array.from(a).some(function(id){return !b.has(id);});}
+    var changed=differs(nextPlanned,planned)||differs(nextFocus,planFocus);
+    completed=new Set(e.detail.completed);
+    inProgress=new Set(e.detail.doing);
+    planned=nextPlanned;planFocus=nextFocus;
+    if(changed) update(true);else Object.keys(nodeEls).forEach(styleNode);
+  });
 
   // ---------- edges ----------
   function edgePath(s,t){
@@ -417,6 +479,7 @@
   }
   function drawEdges(){
     var chain=highlightSet();
+    if(!chain && !showAllLinks.checked){ svg.innerHTML=""; return; }
     var buf="";
     for(var i=0;i<visEdges.length;i++){
       var e=visEdges[i], s=e[0], t=e[1], alt=e[2];
@@ -424,6 +487,7 @@
       var rt=roleOf(t);
       if(rt.k==="primary"||rt.k==="shared") col=areaColor(rt.areas[0]);
       var on = chain && (chain[s]&&chain[t]);
+      if(!showAllLinks.checked && !on) continue;
       if(chain){ op = on? 0.95 : 0.06; if(on) w=2.3; }
       buf += '<path d="'+edgePath(s,t)+'" stroke="'+col+'" stroke-width="'+w+'" opacity="'+op+'"'+(alt?' stroke-dasharray="4 3"':'')+'></path>';
     }
@@ -432,22 +496,35 @@
 
   // ---------- highlight: full up + downstream chain of the focused node ----------
   function highlightSet(){
-    var focus = hovered || pinned;
-    if(!focus || !nodeById[focus]) return null;
+    var focus = pinned.size? Array.from(pinned) : hovered? [hovered] : [];
+    if(!focus.length) return null;
     var vset={}; visIds.forEach(function(i){vset[i]=1;});
-    var set={}; set[focus]=1;
-    var st=[focus], n;
-    while(st.length){ n=st.pop(); inadj[n].forEach(function(p){ if(vset[p]&&!set[p]){set[p]=1; st.push(p);} }); }
-    st=[focus];
-    while(st.length){ n=st.pop(); outadj[n].forEach(function(c){ if(vset[c]&&!set[c]){set[c]=1; st.push(c);} }); }
+    var set={};
+    function trace(adj){
+      var seen={}, stack=focus.slice();
+      while(stack.length){
+        var n=stack.pop();
+        if(seen[n]) continue;
+        seen[n]=1; set[n]=1;
+        adj[n].forEach(function(next){ if(vset[next]&&!seen[next]) stack.push(next); });
+      }
+    }
+    trace(inadj); trace(outadj);
     return set;
   }
   function applyHighlight(){
     var chain=highlightSet();
+    var pins=Array.from(pinned);
+    unpinBtn.hidden=!pins.length;
+    unpinBtn.textContent=pins.length? (pins.length<=2? "Pinned: "+pins.join(", "):pins.length+" pinned")+" ×":"";
+    unpinBtn.title="Clear all pins: "+pins.join(", ");
+    unpinBtn.setAttribute("aria-label", "Clear all pinned modules");
     visIds.forEach(function(id){
       var el=nodeEls[id]; if(!el) return;
+      el.classList.toggle("pinned", pinned.has(id));
+      el.title=pinned.has(id)? "Pinned — click to unpin; drag to the planner":"Hover to trace connections; click to pin and add to the planner";
       if(!chain){ el.classList.remove("faded","hot"); return; }
-      if(chain[id]){ el.classList.remove("faded"); el.classList.toggle("hot", id===(hovered||pinned)); }
+      if(chain[id]){ el.classList.remove("faded"); el.classList.toggle("hot", !pinned.has(id)&&!pinned.size&&id===hovered); }
       else { el.classList.add("faded"); el.classList.remove("hot"); }
     });
     drawEdges();

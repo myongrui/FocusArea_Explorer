@@ -3,17 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CS Focus Areas — Interactive Prerequisite Explorer</title>
+  <title>Focus Area Explorer</title>
   <meta name="description" content="Drag NUS CS focus areas onto a canvas to build a self-relayering AY2026-27 prerequisite tree and see where areas share modules.">
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=20261132">
 </head>
 <body>
   <div class="wrap">
     <header>
-      <h1>CS Focus Areas — Interactive Prerequisite Explorer</h1>
-      <p class="sub"><b>Drag a focus area onto the canvas</b> (or tap it) to drop its modules in. </p>
-      <p class="sub">The tree rebuilds itself: foundations on the left, then the prerequisite chain flowing right into each area's primaries. Add several to see where areas <b>share</b> modules. Data: NUSMods, current <b>AY2026&ndash;27</b>. Hover a module to trace its full chain; every code links out to NUSMods.</p>
-      </header>
+      <h1>Focus Area Explorer</h1>
+    </header>
 
     <div class="app">
       <aside class="palette" id="palette">
@@ -30,10 +28,19 @@
 
       <section class="stage" id="stage">
         <div class="stage-bar">
-          <span class="stat"><b id="sN">5</b> modules</span>
+          <span class="stat"><b id="sN">13</b> modules</span>
           <span class="stat"><b id="sE">0</b> links</span>
           <span class="stat"><b id="sA">0</b> areas</span>
+          <button class="fitbtn on" id="btnUnpin" hidden title="Clear all pinned modules"></button>
           <span class="spacer"></span>
+          <label class="pathway-toggle" title="Hide alternative routes outside the CS foundation curriculum">
+            <input type="checkbox" id="csOnly" checked>
+            CS pathway only
+          </label>
+          <label class="pathway-toggle">
+            <input type="checkbox" id="showAllLinks">
+            Show all links
+          </label>
           <span class="leg"><span class="box"></span>required</span>
           <span class="leg"><span class="box dash"></span>one of several</span>
           <button class="fitbtn" id="btnFit" title="Scale the whole tree to fit the pane">Fit</button>
@@ -46,22 +53,47 @@
           <div class="empty" id="empty">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
             <span class="big">Drag a focus area here</span>
-            <span>— foundation core shown below</span>
           </div>
         </div>
         <div class="drophint" id="drophint">Drop to add</div>
       </section>
     </div>
 
-    <footer>
-      <span class="leg" style="display:inline-flex"><span class="badge" style="width:8px;height:8px;border-radius:50%;background:var(--fnd);display:inline-block"></span>&nbsp;<b style="color:var(--ink2)">Foundation</b> common core &nbsp;&middot;&nbsp;</span>
-      <span class="leg" style="display:inline-flex"><span class="badge" style="width:8px;height:8px;border-radius:2px;background:var(--support);display:inline-block"></span>&nbsp;<b style="color:var(--ink2)">Support</b> on-path prerequisite whose own area isn't active &nbsp;&middot;&nbsp;</span>
-      <span><b style="color:var(--ink2)">Primary</b> area-coloured &nbsp;&middot;&nbsp; <b style="color:var(--ink2)">Shared</b> gradient bar = counts toward several active areas.</span>
-      <br>A module can be Support under one selection and a coloured Primary under another — e.g. drop <span class="kb">Parallel Computing</span> and <span class="kb">CS3210</span> turns from grey Support into a coloured Primary. Focus-area membership follows the <a href="https://www.comp.nus.edu.sg/programmes/ug/focus/" target="_blank" rel="noopener" style="color:inherit">official NUS SoC list</a>; prerequisites are from NUSMods (AY2026&ndash;27). CS4232 is listed by SoC but has no NUSMods offering, and CS3212 (retired alt-prereq of CS4212) is dropped.
-    </footer>
+    <div class="planner-toolbar">
+      <button class="btn" id="addFoundations">Add foundations</button>
+      <button class="btn icon-btn" id="importPlanner" title="Import plan" aria-label="Import plan">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
+      </button>
+      <input type="file" id="planFile" accept=".json,application/json" hidden>
+      <button class="btn icon-btn" id="exportPlanner" title="Export to NUSMods" aria-label="Export to NUSMods">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></svg>
+      </button>
+    </div>
+
+    <section class="planner" aria-label="Semester planner">
+      <div class="planner-main">
+      <div class="planner-settings">
+        <form class="planner-search" id="planAddForm" role="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
+          <input id="planCode" type="search" aria-label="Search modules by code or name" aria-controls="planSearchResults" autocomplete="off" required>
+          <ul class="plan-search-results" id="planSearchResults" aria-label="Module search results" hidden></ul>
+        </form>
+        <div class="planner-summary" id="planSummary" aria-live="polite"></div>
+      </div>
+      <progress id="planProgress" max="160" value="0" aria-label="Cleared units"></progress>
+      <div class="plan-pillars" id="planPillars" aria-label="Degree pillar progress"></div>
+      <p class="planner-status" id="plannerStatus" role="status"></p>
+      <div class="planner-timeline" tabindex="0" role="region" aria-label="Academic years — scroll horizontally to view later semesters">
+        <div class="planner-semesters" id="plannerSemesters"></div>
+      </div>
+      <div class="planner-buckets" id="plannerBuckets"></div>
+      </div>
+    </section>
   </div>
 
-  <script src="js/data.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/data.js?v=20261132"></script>
+  <script src="js/app.js?v=20261132"></script>
+  <script src="js/planner-core.js?v=20261132"></script>
+  <script src="js/planner.js?v=20261132"></script>
 </body>
 </html>
