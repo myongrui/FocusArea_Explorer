@@ -2,8 +2,8 @@ name: Update focus-area data
 
 on:
   schedule:
-    # First day of each month at 09:00 UTC.
-    - cron: "0 9 1 * *"
+    # Every Monday at 09:00 UTC.
+    - cron: "0 9 * * 1"
   workflow_dispatch:
   push:
     paths:
