@@ -1,10 +1,4 @@
-## Try it
-
-#### <https://myongrui.github.io/FocusArea_Explorer/>
-
-#### star me if it helped ❤️
-
-# Focus Area Explorer
+## Focus Area Explorer
 
 An interactive prerequisite-tree explorer for **NUS Computer Science** focus areas.
 Drag any of the 11 focus areas onto the canvas and the tree rebuilds itself —
@@ -15,6 +9,12 @@ modules.
 Follows the official [NUS SoC focus list](https://www.comp.nus.edu.sg/programmes/ug/focus/).
 Prerequisites and titles come from the [NUSMods](https://nusmods.com) API v2,
 academic year **2026–2027** 
+
+## Try it
+
+#### <https://myongrui.github.io/FocusArea_Explorer/>
+
+#### star me if it helped ❤️
 
 ## Planner
 
