@@ -1,0 +1,45 @@
+name: Update focus-area data
+
+on:
+  schedule:
+    # First day of each month at 09:00 UTC.
+    - cron: "0 9 1 * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - "tools/build-data.js"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Regenerate js/data.js from NUSMods
+        run: node tools/build-data.js > js/data.js
+
+      - name: Run planner tests
+        run: node --test tools/test-planner.js
+
+      - name: Commit updated data
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --exit-code -- js/data.js; then
+            git add js/data.js
+            local_date=$(date -u +%Y-%m-%d)
+            git commit -m "chore: refresh focus-area data (NUSMods ${local_date})"
+            git push
+          else
+            echo "No data changes; nothing to commit."
+          fi
