@@ -10,9 +10,7 @@ Follows the official [NUS SoC focus list](https://www.comp.nus.edu.sg/programmes
 Prerequisites and titles come from the [NUSMods](https://nusmods.com) API v2,
 academic year **2026–2027** 
 
-## Try it
-
-#### <https://myongrui.github.io/FocusArea_Explorer/>
+### Try it -> <https://myongrui.github.io/FocusArea_Explorer/>
 
 #### star me if it helped ❤️
 
