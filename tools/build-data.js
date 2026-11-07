@@ -32,7 +32,11 @@ var AREAS = [
   {k:"parallel",name:"Parallel Computing",light:"#4b6ba8",dark:"#5f7fd0",prim:["CS3210","CS3211","CS4223","CS4231"]}
 ];
 
-var FOUNDATION = ["CS1231S","CS2030S","CS2040S","CS2100","CS2106"];
+// The CS foundation / common core: drawn in the foundation style and shown on
+// their own when no focus area is active. Seeded into the closure so a
+// foundation module appears even when nothing in the graph requires it.
+var FOUNDATION = ["CS1101S","CS1231S","CS2030S","CS2040S","CS2100","CS2106",
+                  "MA1521","ST2334"];
 var SKIP = {"CS4232":1,"CS3212":1};
 
 // Hand-shortened labels kept from earlier hand-maintained data (158px wide
@@ -141,6 +145,10 @@ function edgeFlags(tree, drawn, canonOf){
   list.forEach(function(m){ known[m.moduleCode]=m; });
 
   var closure={}, frontier=[];
+  FOUNDATION.forEach(function(c){
+    if(SKIP[c]||closure[c]) return;
+    closure[c]=1; frontier.push(c);
+  });
   AREAS.forEach(function(a){
     a.prim.forEach(function(c){
       if(SKIP[c]||closure[c]) return;
