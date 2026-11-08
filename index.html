@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Focus Area Explorer</title>
   <meta name="description" content="Drag NUS CS focus areas onto a canvas to build a self-relayering AY2026-27 prerequisite tree and see where areas share modules.">
-  <link rel="stylesheet" href="css/styles.css?v=20261136">
+  <link rel="stylesheet" href="css/styles.css?v=20261163">
 </head>
 <body>
   <div class="wrap">
@@ -59,17 +59,6 @@
       </section>
     </div>
 
-    <div class="planner-toolbar">
-      <button class="btn" id="addFoundations">Add foundations</button>
-      <button class="btn icon-btn" id="importPlanner" title="Import plan" aria-label="Import plan">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
-      </button>
-      <input type="file" id="planFile" accept=".json,application/json" hidden>
-      <button class="btn icon-btn" id="exportPlanner" title="Export to NUSMods" aria-label="Export to NUSMods">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></svg>
-      </button>
-    </div>
-
     <section class="planner" aria-label="Semester planner">
       <div class="planner-main">
       <div class="planner-settings">
@@ -78,20 +67,23 @@
           <input id="planCode" type="search" aria-label="Search modules by code or name" aria-controls="planSearchResults" autocomplete="off" required>
           <ul class="plan-search-results" id="planSearchResults" aria-label="Module search results" hidden></ul>
         </form>
+        <div class="planner-inline-actions">
+          <button class="btn" id="addFoundations" title="Add all foundation modules">Add foundations</button>
+          <button class="icon-btn" id="importPlanner" type="button" title="Import plan" aria-label="Import plan"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg><span>Import</span></button>
+          <input type="file" id="planFile" accept=".json,application/json" hidden>
+          <button class="icon-btn" id="exportPlanner" type="button" title="Export to NUSMods" aria-label="Export to NUSMods"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></svg><span>Export</span></button>
+        </div>
       </div>
       <div class="plan-progress-block">
-        <div class="plan-progress-head">
-          <span class="plan-progress-remaining" id="planRemaining">160 units to go</span>
-        </div>
         <div class="plan-progress-row">
           <div class="plan-progress-holder">
             <span class="plan-progress-stop stop-cleared" id="planCleared">0</span>
             <span class="plan-progress-stop stop-planned" id="planPlanned">0</span>
+            <span class="plan-progress-stop stop-total" id="planTarget">160</span>
             <div class="plan-progress" id="planProgress" role="progressbar" aria-label="Cleared and planned units" aria-valuemin="0" aria-valuemax="160" aria-valuenow="0">
               <i class="plan-progress-cleared" id="planBarCleared"></i><i class="plan-progress-planned" id="planBarPlanned"></i>
             </div>
           </div>
-          <span class="plan-progress-target" id="planTarget">160</span>
         </div>
       </div>
       <div class="plan-pillars" id="planPillars" aria-label="Degree pillar progress"></div>
@@ -104,9 +96,9 @@
     </section>
   </div>
 
-  <script src="js/data.js?v=20261136"></script>
-  <script src="js/app.js?v=20261136"></script>
-  <script src="js/planner-core.js?v=20261136"></script>
-  <script src="js/planner.js?v=20261136"></script>
+  <script src="js/data.js?v=20261163"></script>
+  <script src="js/app.js?v=20261163"></script>
+  <script src="js/planner-core.js?v=20261163"></script>
+  <script src="js/planner.js?v=20261163"></script>
 </body>
 </html>

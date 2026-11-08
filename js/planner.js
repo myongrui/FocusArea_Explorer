@@ -3,9 +3,10 @@
   var core=PlannerCore, key="csfae:planner:v2", legacyKey="csfae:planner:v1", api="https://api.nusmods.com/v2/2026-2027";
   var SLOT_NAMES=["Sem 1","Winter","Sem 2","Summer"];
   var state={version:2,startYear:2026,years:4,target:160,semesterStatus:{},entries:{},groups:[],groupSeq:1,ueCredit:0};
-  var pending={}, addTo=-2, revision=0, wasFull=null;
+  var pending={}, addTo=-2, revision=0, lastCelebration=-1e9, progressRaf=null, progressShown={cleared:0,planned:0};
   var status=document.getElementById("plannerStatus");
   var codeInput=document.getElementById("planCode"), searchList=document.getElementById("planSearchResults");
+  var PILLAR_NAMES={digital:"Digital Literacy",critique:"Critique & Expression",cultures:"Cultures & Connections",data:"Data Literacy",singapore:"Singapore Studies",communities:"Communities & Engagement",ethics:"IS1108 Ethics",idcd:"ID/CD",ue:"UE"};
   var extraModules=[{moduleCode:"CP3200",title:"Internship"}];
   var catalog=NODES.map(function(n){return {moduleCode:n.id,title:n.t};}).concat(extraModules), catalogRequest=null, matches=[], searchIndex=0;
   function migrate(saved){
@@ -96,6 +97,20 @@
     requestAnimationFrame(frame);
   }
   function celebrate(){playChime();confetti();}
+  function animateProgress(cleared,planned){
+    var from={cleared:progressShown.cleared,planned:progressShown.planned};
+    var to={cleared:cleared,planned:planned},t0=performance.now();
+    if(progressRaf) cancelAnimationFrame(progressRaf);
+    function frame(now){
+      var k=Math.min(1,(now-t0)/380),e=1-Math.pow(1-k,3);
+      var current={cleared:from.cleared+(to.cleared-from.cleared)*e,planned:from.planned+(to.planned-from.planned)*e};
+      document.getElementById("planCleared").textContent=Math.round(current.cleared);
+      document.getElementById("planPlanned").textContent=Math.round(current.planned);
+      progressShown=current;
+      if(k<1) progressRaf=requestAnimationFrame(frame);else progressRaf=null;
+    }
+    progressRaf=requestAnimationFrame(frame);
+  }
   function label(term){
     if(term===-1) return "Cleared";
     if(term===-2) return "Unplanned";
@@ -133,8 +148,46 @@
     if(state.entries[code]) return;
     add(code,-2).catch(report);
   });
-  function chooseModule(code){
+  function placeholderCatalog(){
+    var reqs=core.commonRequirements(state),out=[];
+    reqs.forEach(function(req){
+      if(req.fulfilled) return;
+      if(req.key==="idcd"){
+        var missing=Math.ceil(Math.max(0,12-(req.units+req.plannedUnits))/4),free=0;
+        for(var i=1;i<=missing;i++){if(!state.entries["PH-IDCD-"+i]) free++;}
+        if(free) out.push({moduleCode:"PH-IDCD",title:"ID/CD module",placeholder:true,pillarKey:"idcd",slotLabel:"ID/CD",units:4,count:free});
+      } else if(!req.planned){
+        var code="PH-"+req.key.toUpperCase();
+        if(!state.entries[code]) out.push({moduleCode:code,title:req.name+" module",placeholder:true,pillarKey:req.key,slotLabel:"GE",units:4,count:1});
+      }
+    });
+    var ue=core.pillars(state,true).find(function(p){return p.key==="ue";}),ueRemaining=Math.max(0,40-(ue?ue.units:0));
+    if(ueRemaining>0) out.push({moduleCode:"PH-UE",title:"UE module",placeholder:true,pillarKey:"ue",slotLabel:"UE",units:4,count:Math.ceil(ueRemaining/4)});
+    return out;
+  }
+  function placeholderEntry(def,term){
+    return {term:term,module:{title:def.title,units:4,prereqTree:null,prerequisite:"",preclusion:"",corequisite:"",semesters:[1,2,3,4],placeholder:true,pillarKey:def.pillarKey,slotLabel:def.slotLabel}};
+  }
+  function addPlaceholder(def,term){
+    if(def.pillarKey==="ue"){
+      var ue=core.pillars(state,true).find(function(p){return p.key==="ue";}),remaining=Math.max(0,40-(ue?ue.units:0));
+      if(remaining<=0){duplicateFeedback();return;}
+      for(var j=1;j<=Math.ceil(remaining/4);j++){var ueCode="PH-UE-"+j;if(!state.entries[ueCode]){state.entries[ueCode]=placeholderEntry({title:"UE module",pillarKey:"ue",slotLabel:"UE"},term);save();status.textContent="UE module placeholder added.";break;}}
+      return;
+    }
+    if(def.pillarKey==="idcd"){
+      var req=core.commonRequirements(state).find(function(r){return r.key==="idcd";});
+      var missing=Math.ceil(Math.max(0,12-(req.units+req.plannedUnits))/4),added=0;
+      for(var i=1;i<=missing;i++){var code="PH-IDCD-"+i;if(!state.entries[code]){state.entries[code]=placeholderEntry({title:"ID/CD module",pillarKey:"idcd",slotLabel:"ID/CD"},term);added++;}}
+      if(added){save();status.textContent=added+" ID/CD module"+(added===1?"":"s")+" added.";}else duplicateFeedback();
+      return;
+    }
+    if(state.entries[def.moduleCode]){duplicateFeedback();return;}
+    state.entries[def.moduleCode]=placeholderEntry(def,term);save();status.textContent="Placeholder added to "+label(term)+".";
+  }
+  function chooseModule(code,module){
     var query=codeInput.value;
+    if(module&&module.placeholder){addPlaceholder(module,addTo);if(codeInput.value===query){codeInput.value="";renderSearch();}return;}
     add(code,addTo).then(function(){
       if(codeInput.value===query){codeInput.value="";renderSearch();}
     }).catch(report);
@@ -146,7 +199,7 @@
     return group.modules[index];
   }
   function renderSearch(){
-    matches=core.searchGroups(codeInput.value,catalog,8);
+    matches=core.searchGroups(codeInput.value,catalog.concat(placeholderCatalog()),8);
     searchIndex=Math.min(searchIndex,Math.max(0,matches.length-1));
     searchList.replaceChildren();searchList.hidden=!codeInput.value.trim();
     if(searchList.hidden) return;
@@ -156,12 +209,13 @@
       var variantsLeft=group.modules.length>1;
       card.draggable=true;card.tabIndex=-1;card.dataset.code=m.moduleCode;
       card.setAttribute("role","option");card.setAttribute("aria-selected",String(i===searchIndex));
-      card.append(el("b",null,m.moduleCode),el("span",null,group.title));
+      if(m.placeholder) card.classList.add("placeholder-search");
+      card.append(el("b",null,m.placeholder?m.slotLabel:m.moduleCode),el("span",null,group.title));
       if(variantsLeft) card.appendChild(el("small",null,(group.modules.indexOf(m)+1)+"/"+group.modules.length+" ←→"));
       card.title="Drag to a slot, or click to add to "+label(addTo);
-      card.setAttribute("aria-label","Add "+m.moduleCode+" "+group.title+(variantsLeft?" — use left and right arrows to choose among "+group.modules.map(function(x){return x.moduleCode;}).join(", "):"")+" to "+label(addTo));
-      card.addEventListener("click",function(){chooseModule(m.moduleCode);});
-      card.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();chooseModule(m.moduleCode);}});
+      card.setAttribute("aria-label","Add "+(m.placeholder?m.slotLabel:m.moduleCode)+" "+group.title+(variantsLeft?" — use left and right arrows to choose among "+group.modules.map(function(x){return x.moduleCode;}).join(", "):"")+" to "+label(addTo));
+      card.addEventListener("click",function(){chooseModule(m.moduleCode,m);});
+      card.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();chooseModule(m.moduleCode,m);}});
       card.addEventListener("dragstart",function(e){
         e.dataTransfer.setData("application/x-fa-module",m.moduleCode);
         e.dataTransfer.setData("text/plain",m.moduleCode);
@@ -201,7 +255,7 @@
     e.preventDefault();
     var query=codeInput.value.trim();
     if(/^[A-Za-z]{2,}\d{4}[A-Za-z]*$/.test(query)) chooseModule(query);
-    else if(matches[searchIndex]) chooseModule(selectedVariant(matches[searchIndex]).moduleCode);
+    else if(matches[searchIndex]){var chosen=selectedVariant(matches[searchIndex]);chooseModule(chosen.moduleCode,chosen);}
   });
   function addYear(){
     state.years++;save();
@@ -243,12 +297,20 @@
       e.preventDefault();e.stopPropagation();box.classList.remove("merge-target");mergeInto(targetCode,source);
     });
   }
+  function decoratePlanCard(box,code){
+    var node=NODES.find(function(n){return n.id===code;}),keys=node?node.a:[];
+    if(!keys.length) return;
+    var colors=keys.map(function(k){return "var(--a-"+k+")";});
+    if(colors.length===1){box.classList.add("has-area");box.style.setProperty("--area",colors[0]);return;}
+    var stops=colors.map(function(c,i){var a=Math.round(i/colors.length*100),b=Math.round((i+1)/colors.length*100);return "color-mix(in srgb, "+c+" 12%, var(--panel)) "+a+"% "+b+"%";}).join(", ");
+    box.classList.add("has-split");box.style.setProperty("--split-bg","linear-gradient(180deg, "+stops+")");
+  }
   function groupCard(group){
     var codes=group.codes.filter(function(c){return state.entries[c];});
     if(!codes.length) return null;
     if(codes.indexOf(group.selected)<0) group.selected=codes[0];
     var selected=group.selected,m=state.entries[selected].module,problems=core.issues(selected,state);
-    var box=el("article","plan-card plan-group");box.draggable=true;box.dataset.group=group.id;
+    var box=el("article","plan-card plan-group");box.draggable=true;box.dataset.group=group.id;decoratePlanCard(box,selected);
     var top=el("div","plan-card-top"),remove=el("button","plan-remove","×");
     remove.type="button";remove.setAttribute("aria-label","Remove either/or group");
     remove.addEventListener("click",function(){removeGroup(group);});
@@ -271,13 +333,15 @@
   }
   function card(code){
     var entry=state.entries[code], m=entry.module, problems=core.issues(code,state);
-    var box=el("article","plan-card");box.draggable=true;box.dataset.code=code;
+    var box=el("article","plan-card");box.draggable=true;box.dataset.code=code;decoratePlanCard(box,code);
+    if(m.placeholder) box.classList.add("plan-placeholder-card");
     if(entry.term===-2 && NODES.some(function(n){return n.id===code && n.f;})) box.classList.add("plan-foundation");
-    var top=el("div","plan-card-top"), link=el("a",null,code);
-    link.href="https://nusmods.com/courses/"+code;link.target="_blank";link.rel="noopener";
-    var remove=el("button","plan-remove","×");remove.type="button";remove.setAttribute("aria-label","Remove "+code);
+    var top=el("div","plan-card-top"),remove=el("button","plan-remove","×");
+    if(m.placeholder){top.appendChild(el("span","plan-slot-label",m.slotLabel||"GE"));}
+    else {var link=el("a",null,code);link.href="https://nusmods.com/courses/"+code;link.target="_blank";link.rel="noopener";top.appendChild(link);}
+    remove.type="button";remove.setAttribute("aria-label","Remove "+code);
     remove.addEventListener("click",function(){delete state.entries[code];save();});
-    top.append(link,el("span",null,m.units+" units"),remove);
+    top.append(el("span",null,m.units+" units"),remove);
     box.append(top,el("div","plan-card-title",m.title));
     problems.filter(function(p){return p.kind==="missing";}).forEach(function(p){
       box.appendChild(el("p","plan-check missing",p.text));
@@ -292,21 +356,28 @@
     if(special) box.classList.add("plan-special");
     if(term>=0) box.classList.add("status-"+(state.semesterStatus[term]||"todo"));
     function level(code){var m=code.match(/\d{4}/);return m?Number(m[0]):9999;}
-    var entries=Object.keys(state.entries).filter(function(c){return state.entries[c].term===term;}).sort(function(a,b){return term===-2 ? (level(a)-level(b) || a.localeCompare(b)) : a.localeCompare(b);});
+    var entries=Object.keys(state.entries).filter(function(c){return state.entries[c].term===term;}).sort(function(a,b){
+      if(term===-2){
+        var pa=!!state.entries[a].module.placeholder,pb=!!state.entries[b].module.placeholder;
+        if(pa!==pb) return pa?-1:1;
+        return level(a)-level(b)||a.localeCompare(b);
+      }
+      return a.localeCompare(b);
+    });
     var units=entries.reduce(function(sum,c){return sum+(core.isCounted(state,c)?state.entries[c].module.units:0);},0);
     if(term>=0){
       var title=el("button","plan-term-title",SLOT_NAMES[term%4]);title.type="button";
       var current=state.semesterStatus[term]||"todo";
       title.title="Click to change semester status";
-      title.setAttribute("aria-label",SLOT_NAMES[term%4]+" — "+(current==="done"?"done":current==="doing"?"doing":"not done")+". Click to change.");
+      title.setAttribute("aria-label",SLOT_NAMES[term%4]+" — "+(current==="done"?"done":"not done")+". Click to change.");
       title.addEventListener("click",function(){
         var status=state.semesterStatus[term]||"todo";
-        state.semesterStatus[term]=status==="todo"?"doing":status==="doing"?"done":"todo";
+        state.semesterStatus[term]=status==="done"?"todo":"done";
         save();
       });
       var wrap=el("span","plan-term-wrap");wrap.appendChild(title);
       var legend=el("span","plan-term-legend");legend.setAttribute("role","tooltip");
-      [["todo","Not done"],["doing","Doing"],["done","Done"]].forEach(function(pair){
+      [["todo","Not done"],["done","Done"]].forEach(function(pair){
         var item=el("span");item.appendChild(el("i","dot-"+pair[0]));item.appendChild(document.createTextNode(pair[1]));legend.appendChild(item);
       });
       wrap.appendChild(legend);heading.appendChild(wrap);
@@ -357,6 +428,7 @@
       var group=core.groupFor(state,code);
       if(group){group.term=term;group.codes.forEach(function(c){state.entries[c].term=term;});save();}
       else if(state.entries[code]){state.entries[code].term=term;save();}
+      else if(code.indexOf("PH-")===0){var def=placeholderCatalog().find(function(p){return p.moduleCode===code;});if(def)addPlaceholder(def,term);else duplicateFeedback();}
       else add(code,term).catch(report);
     });
     return box;
@@ -395,30 +467,47 @@
     document.getElementById("planBarPlanned").style.width=((cleared+plannedUnits)/target*100)+"%";
     var clearedStop=target?cleared/target*100:0,plannedStop=target?(cleared+plannedUnits)/target*100:0;
     var clearedLabel=document.getElementById("planCleared"),plannedLabel=document.getElementById("planPlanned");
-    clearedLabel.textContent=cleared;clearedLabel.style.left=Math.max(2,Math.min(98,clearedStop))+"%";
-    plannedLabel.textContent=cleared+plannedUnits;plannedLabel.hidden=plannedUnits===0;plannedLabel.style.left=Math.max(2,Math.min(98,plannedStop))+"%";
-    document.getElementById("planRemaining").textContent=total.remaining+" units to go";
-    document.getElementById("planTarget").textContent=target;
-    var full=cleared+plannedUnits>=target;
-    if(wasFull===null) wasFull=full;
-    else if(full&&!wasFull){wasFull=true;celebrate();}
-    else if(!full) wasFull=false;
+    clearedLabel.style.left=Math.max(2,Math.min(98,clearedStop))+"%";
+    plannedLabel.hidden=plannedUnits===0;plannedLabel.style.left=Math.max(2,Math.min(98,plannedStop))+"%";
+    var targetLabel=document.getElementById("planTarget");targetLabel.textContent=target;targetLabel.classList.toggle("hide",Math.max(clearedStop,plannedStop)>=90);animateProgress(cleared,cleared+plannedUnits);
+    var full=cleared>=target;
+    if(full&&performance.now()-lastCelebration>2200){lastCelebration=performance.now();celebrate();}
+    var shortAreas={algo:"Algo",ai:"AI",pl:"PL",se:"SE",graphics:"Graphics",security:"Security",database:"DB",hci:"HCI",mir:"MIR",network:"Network",parallel:"Parallel"};
     var pillarWrap=document.getElementById("planPillars");pillarWrap.replaceChildren();
     core.pillars(state).forEach(function(p){
       var card=el("section","plan-pillar pillar-"+p.key);
-      var head=el("div","plan-pillar-head");head.append(el("h3",null,p.name),el("b",null,Math.min(p.units,p.effectiveTarget)+"/"+p.effectiveTarget));
+      var head=el("div","plan-pillar-head");head.append(el("h3",null,p.name),el("b",null,Math.min(p.units,p.effectiveTarget)+"/"+p.effectiveTarget),el("span","plan-pillar-courses",p.count+" courses"));
       var bar=el("div","plan-pillar-bar"),fill=el("i");fill.style.width=Math.min(100,p.effectiveTarget?p.units/p.effectiveTarget*100:0)+"%";bar.appendChild(fill);
       if(p.key==="common"){
         var mini=el("div","plan-common-mini");
         core.commonRequirements(state).forEach(function(req){
-          var shownUnits=req.fulfilled?req.units:(req.plannedUnits||0);
+          var shownUnits=req.units||req.plannedUnits||0;
           var label=req.key==="idcd"?"ID/CD "+Math.min(shownUnits,12)+"/12":req.name;
-          var item=el("span","plan-common-item "+(req.fulfilled?"fulfilled":req.planned?"planned":"missing"),label);
+          var item=el("span","plan-common-item "+(req.fulfilled?"fulfilled":req.planned?"planned":req.partial?"partial":"placeholder"),label);
           var detail=req.fulfilled?" · done: "+req.codes.join(", "):req.planned?" · planned: "+req.plannedCodes.join(", "):" · not planned";
-          item.title=req.key==="idcd"?req.units+"/12 done units · "+req.plannedUnits+"/12 planned units · "+req.idCount+" ID · "+req.cdCount+" CD":req.name+detail;
+          item.title=req.key==="idcd"?req.units+"/12 done units · "+req.plannedUnits+"/12 planned units · "+req.idCount+" ID · "+req.cdCount+" CD":req.name+detail;if(!req.fulfilled&&!req.planned&&!req.partial)item.title+=" — placeholder: add a course for this pillar";
           mini.appendChild(item);
         });
         card.append(head,bar,mini);
+      } else if(p.key==="breadth" && typeof AREAS!=="undefined"){
+        var areas=core.focusAreas(state,AREAS).sort(function(a,b){return (b.fulfilled?1:0)-(a.fulfilled?1:0)||b.count-a.count||b.count4000-a.count4000||a.name.localeCompare(b.name);});
+        var featured=areas.filter(function(a){return a.fulfilled;})[0]||areas.filter(function(a){return a.count>0;})[0]||null;
+        var status=el("div","plan-breadth-status "+(featured?(featured.fulfilled?"fulfilled":"near"):"none"));
+        if(featured) status.style.setProperty("--fc","var(--a-"+featured.key+")");
+        status.textContent=featured?(shortAreas[featured.key]||featured.name)+" "+Math.min(featured.count,3)+"/3 courses · 4k "+featured.count4000+(featured.fulfilled?" ✓":""):"No focus area started";
+        if(featured) status.title=featured.name+": "+featured.count+" cleared primaries, "+featured.count4000+" at 4000-level"+(featured.fulfilled?" — fulfilled":"");
+        var near=areas.filter(function(a){return a!==featured&&(a.fulfilled||a.count>=2);}).slice(0,3);
+        card.append(head,bar,status);
+        if(near.length){
+          var nearBlock=el("div","plan-breadth-focus");
+          near.forEach(function(a){
+            var item=el("span","plan-breadth-focus-item "+(a.fulfilled?"fulfilled":"near"),(shortAreas[a.key]||a.name)+" "+Math.min(a.count,3)+"/3 courses · 4k "+a.count4000);
+            item.style.setProperty("--fc","var(--a-"+a.key+")");
+            item.title=a.name+": "+a.count+" cleared primaries, "+a.count4000+" at 4000-level"+(a.fulfilled?" — fulfilled":"");
+            nearBlock.appendChild(item);
+          });
+          card.appendChild(nearBlock);
+        }
       } else if(p.key==="ue"){
         var creditLabel=el("label","plan-ue-toggle");
         var creditInput=el("input");creditInput.type="checkbox";creditInput.checked=(state.ueCredit||0)>=20;
@@ -553,6 +642,8 @@
     setTimeout(function(){URL.revokeObjectURL(url);},1000);
     status.textContent="Exported. Upload the file in NUSMods Planner.";
   });
+  Object.keys(state.semesterStatus||{}).forEach(function(k){if(state.semesterStatus[k]==="doing") state.semesterStatus[k]="todo";});
+  Object.keys(state.entries).forEach(function(c){var m=state.entries[c].module;if(m.placeholder){m.title=(PILLAR_NAMES[m.pillarKey]||m.pillarKey)+" module";m.slotLabel=m.pillarKey==="idcd"?"ID/CD":"GE";}});
   render();syncGraph();
   if(!Object.keys(state.entries).length) slotFoundations().catch(function(){});
 })();

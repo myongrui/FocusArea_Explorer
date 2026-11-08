@@ -121,15 +121,18 @@ test("semester status changes completion totals and export",()=>{
   assert.equal(totals.doing,4);
   const exported=core.exportPlan(state);
   const byCode=Object.fromEntries(Object.values(exported.modules).map(m=>[m.moduleCode,m]));
-  assert.equal(byCode.CS1101S.semester,-1);
+  assert.equal(byCode.CS1101S.semester,1);
+  assert.equal(byCode.CS1101S.year,"2026-2027");
   assert.equal(byCode.CS2030S.semester,2);
 });
 
 test("pillars group planned modules and exclude unplanned ones",()=>{
-  const state=plan({CS2030S:entry(-1),MA1521:entry(-1),CS1101S:entry(-1),CS4248:entry(-1),EL1101E:entry(-1),CS2040S:entry(-2)});
+  const state=plan({CS2030S:entry(-1),MA1521:entry(-1),CS1101S:entry(-1),CS4248:entry(-1),CS2113:entry(-1),CS2040S:entry(-2)});
   const pillars=Object.fromEntries(core.pillars(state).map(p=>[p.key,p]));
   assert.deepEqual(["foundation","breadth","common","ue"].map(k=>pillars[k].units),[8,4,4,4]);
   assert.deepEqual(pillars.foundation.codes,["CS2030S","MA1521"]);
+  assert.equal(pillars.foundation.count,2);
+  assert.equal(pillars.breadth.count,1);
   assert.deepEqual(pillars.common.codes,["CS1101S"]);
   assert.deepEqual(core.pillars(state).map(p=>p.target),[48,32,40,40]);
   assert.deepEqual(core.pillars(state).map(p=>p.effectiveTarget),[48,32,40,40]);
@@ -188,7 +191,7 @@ test("common curriculum distinguishes planned from completed requirements",()=>{
 
 test("pillar totals reconcile with earned units, groups, and UE credit",()=>{
   const state=plan({
-    CS2030S:entry(-1),MA1521:entry(-1),CS1101S:entry(-1),EL1101E:entry(-1),CS2100:entry(0),
+    CS2030S:entry(-1),MA1521:entry(-1),CS1101S:entry(-1),CS2113:entry(-1),CS2100:entry(0),
     CS4248:entry(-1),CS4347:entry(-1)
   });
   state.ueCredit=20;
@@ -203,6 +206,17 @@ test("pillar totals reconcile with earned units, groups, and UE credit",()=>{
   assert.equal(pillars.ue.units,24);
   assert.equal(Object.values(pillars).reduce((sum,p)=>sum+p.units,0),totals.completed);
   assert.deepEqual(pillars.breadth.codes,["CS4248"]);
+});
+
+test("ID/CD detection uses the official cross-listed course sets",()=>{
+  const state=plan({DTK1234:entry(-1),CDE2501:entry(-1),EL1101E:entry(-1)});
+  const idcd=core.commonRequirements(state).find(r=>r.key==="idcd");
+  assert.equal(idcd.units,12);
+  assert.equal(idcd.idCount,2);
+  assert.equal(idcd.cdCount,1);
+  assert.equal(idcd.partial,false);
+  const pillars=Object.fromEntries(core.pillars(state).map(p=>[p.key,p]));
+  assert.equal(pillars.common.units,12);
 });
 
 test("dependency code suggestions preserve OR alternatives without duplicates",()=>{

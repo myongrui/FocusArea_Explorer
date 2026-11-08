@@ -38,7 +38,7 @@
   var fitMode = true, lastW = 0, lastH = 0;    // fit-to-view scaling
 
   // ---- geometry constants ----
-  var BW=158, BH=40, STEPX=210, STEPY=54, PADX=26, PADY=30;
+  var BW=158, BH=56, STEPX=210, STEPY=68, PADX=26, PADY=30;
 
   var stage=document.getElementById("stage"),
       canvas=document.getElementById("canvas"),
@@ -446,6 +446,14 @@
     if(wrap) Array.prototype.forEach.call(wrap.children,function(child){child.classList.add("badge");});
   }
   function setRail(el, cols){ setSwatches(el.querySelector(".rail"), cols); }
+  function paintAreas(el, areas){
+    if(areas.length===1){el.classList.add("k-primary");el.style.setProperty("--c",areaColor(areas[0]));return;}
+    if(areas.length>1){
+      var cols=areas.map(areaColor);el.classList.add("k-shared");el.style.setProperty("--c",cols[0]);
+      var split=cols.map(function(c,i){var a=Math.round(i/cols.length*100),b=Math.round((i+1)/cols.length*100);return "color-mix(in srgb, "+c+" 15%, var(--panel)) "+a+"% "+b+"%";}).join(", ");
+      el.style.setProperty("--split-bg","linear-gradient(180deg, "+split+")");setBadges(el,cols);setRail(el,cols);
+    }
+  }
 
   function styleNode(id){
     var el=nodeEls[id]; if(!el) return;
@@ -453,27 +461,22 @@
     el.classList.remove("k-fnd","k-support","k-primary","k-shared");
     el.classList.toggle("completed",completed.has(id));
     el.classList.toggle("inprogress",inProgress.has(id));
-    el.style.removeProperty("--c"); el.style.removeProperty("--grad");
+    el.style.removeProperty("--c"); el.style.removeProperty("--grad"); el.style.removeProperty("--split-bg");
     setBadges(el, [""]);
     var roleEl=el.querySelector(".role");
     if(r.k==="fnd"){ el.classList.add("k-fnd"); roleEl.textContent="CORE"; }
-    else if(r.k==="support"){ el.classList.add("k-support"); roleEl.textContent="SUPPORT"; }
+    else if(r.k==="support"){ el.classList.add("k-support"); roleEl.textContent="SUPPORT"; paintAreas(el,nodeById[id].a); }
     else if(r.k==="primary"){ el.classList.add("k-primary"); el.style.setProperty("--c", areaColor(r.areas[0])); roleEl.textContent="PRIMARY"; }
     else {
-      el.classList.add("k-shared");
-      var cols=r.areas.map(areaColor);
-      el.style.setProperty("--c", cols[0]);
-      setBadges(el, cols);
-      setRail(el, cols);
+      paintAreas(el,r.areas);
       roleEl.textContent=r.areas.length+" AREAS";
       roleEl.title=r.areas.map(function(k){return areaByKey[k].name;}).join(" + ");
     }
     if(completed.has(id)) roleEl.textContent="DONE";
     else if(inProgress.has(id)) roleEl.textContent="DOING";
     else if(planned.has(id) && r.k==="support"){
-      var node=nodeById[id];
-      if(node.a.length){el.classList.add("k-primary");el.style.setProperty("--c",areaColor(node.a[0]));}
-      roleEl.textContent="PLANNED";
+      var node=nodeById[id];roleEl.textContent="PLANNED";
+      if(node.a.length) roleEl.title=node.a.map(function(k){return areaByKey[k].name;}).join(" + ");
     }
   }
   document.addEventListener("planner:status",function(e){

@@ -92,7 +92,8 @@
   }
   var FOUNDATION_PILLAR=new Set(["CS1231S","CS2030S","CS2040S","CS2100","CS2101","CS2103T","CS2106","CS2109S","CS3230"]);
   var MATHS_PILLAR=new Set(["MA1521","MA1522","ST2334"]);
-  var ID_COURSES=new Set(["IS1128","IS2218","IS2238"]);
+  var ID_COURSES=new Set(["CDE2501","EG2501","DTK1234","EG1311","IE2141","PF1101A","PF1101","IS1128","IS2218","IS2238","HSH1000","HSS1000","HSA1000","HSI1000","HSI2001","HSI2002","HSI2003","HSI2004","HSI2005","HSI2007","HSI2008","HSI2009","HSI2010","HSI2011","HSI2013","HSI2014"]);
+  var CD_COURSES=new Set(["ACC1701","ACC1701X","ACC1701XA","ACC1701XB","ACC1701XC","ACC1701XD","DAO2703","MNO1706X","SC1101E","EL1101E","PE2101P","GE2103","XD3103","GE3253","GE3255","GE3256","SPH2002","SC2226","NUR1113A","CDE2300","CDE2310","EG2201A","EG2310","FF1361"]);
   var DIGITAL_LITERACY=new Set(["CS1101S","CS1010","CS1010A","CS1010E","CS1010J","CS1010S","CS1010X","CS1010HS","UTC2851"]);
   var breadthCodes=new Set();
   if(typeof AREAS!=="undefined") AREAS.forEach(function(a){a.prim.forEach(function(c){breadthCodes.add(c);});});
@@ -100,23 +101,26 @@
     var level=Number((code.match(/\d{4}/)||[0])[0]);
     if(FOUNDATION_PILLAR.has(code)) return "foundation";
     if(MATHS_PILLAR.has(code)) return "foundation";
-    if(DIGITAL_LITERACY.has(code) || code==="IS1108" || code==="IS1128" || /^GE[A-Z]?/.test(code) || /^(ES2660|UTW|RVX)/.test(code)) return "common";
+    if(/^PH-UE/.test(code)) return "ue";
+    if(/^PH-/.test(code)) return "common";
+    if(DIGITAL_LITERACY.has(code) || ID_COURSES.has(code) || CD_COURSES.has(code) || /^ID\d{4}/.test(code) || code==="IS1108" || /^GE[A-Z]?/.test(code) || /^(ES2660|UTW|RVX)/.test(code)) return "common";
     if(/^(CS|IFS|CP)/.test(code) && (level>=3000 || breadthCodes.has(code))) return "breadth";
     return "ue";
   }
-  function pillars(state){
+  function pillars(state,includePlanned){
     var defs=[
       {key:"foundation",name:"CS Foundation",target:48},
       {key:"breadth",name:"Breadth & Depth",target:32},
       {key:"common",name:"Common Curriculum",target:40},
       {key:"ue",name:"Unrestricted Electives",target:40}
     ],byKey={};
-    defs.forEach(function(d){d.units=0;d.effectiveTarget=d.target;d.codes=[];byKey[d.key]=d;});
+    defs.forEach(function(d){d.units=0;d.count=0;d.effectiveTarget=d.target;d.codes=[];byKey[d.key]=d;});
     Object.keys(state.entries).forEach(function(code){
       var entry=state.entries[code];
-      if(entryStatus(state,entry)!=="done" || !isCounted(state,code)) return;
+      var done=entryStatus(state,entry)==="done";
+      if((!done&&!(includePlanned&&entry.term>=0))||!isCounted(state,code)) return;
       var bucket=byKey[pillarOf(code)];
-      bucket.units+=entry.module.units;bucket.codes.push(code);
+      bucket.units+=entry.module.units;bucket.count+=1;bucket.codes.push(code);
     });
     byKey.ue.units+=state.ueCredit||0;
     defs.forEach(function(d){d.codes.sort();});
@@ -142,15 +146,17 @@
       {key:"ethics",name:"IS1108 Ethics",test:function(c){return c==="IS1108";}}
     ];
     var codes=Object.keys(state.entries).filter(function(c){return entryStatus(state,state.entries[c])==="done" && isCounted(state,c);});
-    var plannedCodes=Object.keys(state.entries).filter(function(c){return state.entries[c].term>=0 && isCounted(state,c) && codes.indexOf(c)<0;});
-    defs.forEach(function(d){d.codes=codes.filter(d.test);d.plannedCodes=plannedCodes.filter(d.test);d.fulfilled=d.codes.length>0;d.planned=!d.fulfilled&&d.plannedCodes.length>0;});
+    var plannedCodes=Object.keys(state.entries).filter(function(c){return state.entries[c].term>=0 && isCounted(state,c) && codes.indexOf(c)<0 && !state.entries[c].module.placeholder;});
+    var placeholders=Object.keys(state.entries).filter(function(c){return state.entries[c].term>=0 && isCounted(state,c) && state.entries[c].module.placeholder;});
+    defs.forEach(function(d){d.codes=codes.filter(d.test);d.plannedCodes=plannedCodes.filter(d.test);d.fulfilled=d.codes.length>0;d.planned=!d.fulfilled&&(d.plannedCodes.length>0||placeholders.some(function(c){return state.entries[c].module.pillarKey===d.key;}));});
     var id=codes.filter(function(c){return /^ID\d{4}/.test(c)||ID_COURSES.has(c);});
-    var cd=codes.filter(function(c){return /^CD\d{4}/.test(c);});
+    var cd=codes.filter(function(c){return /^CD\d{4}/.test(c)||CD_COURSES.has(c);});
     var plannedId=plannedCodes.filter(function(c){return /^ID\d{4}/.test(c)||ID_COURSES.has(c);});
-    var plannedCd=plannedCodes.filter(function(c){return /^CD\d{4}/.test(c);});
+    var plannedCd=plannedCodes.filter(function(c){return /^CD\d{4}/.test(c)||CD_COURSES.has(c);});
     var units=id.concat(cd).reduce(function(sum,c){return sum+state.entries[c].module.units;},0);
     var plannedUnits=plannedId.concat(plannedCd).reduce(function(sum,c){return sum+state.entries[c].module.units;},0);
-    defs.push({key:"idcd",name:"ID / CD",codes:id.concat(cd),plannedCodes:plannedId.concat(plannedCd),idCount:id.length,cdCount:cd.length,units:units,plannedUnits:plannedUnits,fulfilled:units>=12&&id.length>=2&&cd.length<=1,planned:units<12&&plannedUnits>0});
+    var placeholderUnits=placeholders.filter(function(c){return state.entries[c].module.pillarKey==="idcd";}).reduce(function(sum,c){return sum+state.entries[c].module.units;},0);
+    defs.push({key:"idcd",name:"ID / CD",codes:id.concat(cd),plannedCodes:plannedId.concat(plannedCd),idCount:id.length,cdCount:cd.length,units:units,plannedUnits:plannedUnits+placeholderUnits,fulfilled:units>=12&&id.length>=2&&cd.length<=1,planned:units<12&&(plannedUnits+placeholderUnits)>0,partial:!(units>=12&&id.length>=2&&cd.length<=1)&&units>0});
     return defs;
   }
   function year(start){return start+"-"+(start+1);}
@@ -159,10 +165,10 @@
     var indexes={};
     Object.entries(state.entries).forEach(function(pair,i){
       var code=pair[0],e=pair[1],id=String(i),t=e.term;
-      if(!isCounted(state,code)) return;
-      var done=entryStatus(state,e)==="done";
-      var y=done?"-1":t===-2?"3000":year(state.startYear+Math.floor(t/4));
-      var semester=done?-1:t===-2?-2:[1,3,2,4][t%4], key=y+"|"+semester;
+      if(!isCounted(state,code)||e.module.placeholder||/^PH-/.test(code)) return;
+      var cleared=t===-1;
+      var y=cleared?"-1":t===-2?"3000":year(state.startYear+Math.floor(t/4));
+      var semester=cleared?-1:t===-2?-2:[1,3,2,4][t%4], key=y+"|"+semester;
       out.modules[id]={id:id,year:y,semester:semester,index:indexes[key]||0,moduleCode:code};
       indexes[key]=(indexes[key]||0)+1;
       out.custom[code]={title:e.module.title,moduleCredit:e.module.units};
