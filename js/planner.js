@@ -388,16 +388,15 @@
     if(addTo>=state.years*4) addTo=-2;
     codeInput.setAttribute("aria-label","Search modules by code or name — press Enter to add to "+label(addTo));
     codeInput.setAttribute("aria-controls","planSearchResults");
-    var summary=document.getElementById("planSummary"), total=core.totals(state);summary.replaceChildren();
-    [[total.completed,"earned"],[total.doing,"in progress"],[total.scheduled-total.doing,"scheduled"],[total.unplanned,"unplanned"],[total.remaining,"still to plan"]].forEach(function(pair){
-      var item=el("span");item.append(el("b",null,pair[0]),document.createTextNode(pair[1]));summary.appendChild(item);
-    });
+    var total=core.totals(state);
     var target=state.target,cleared=Math.min(target,total.completed),plannedUnits=Math.min(target-cleared,total.scheduled);
     var progress=document.getElementById("planProgress");progress.setAttribute("aria-valuenow",String(cleared+plannedUnits));progress.setAttribute("aria-valuemax",String(target));
     document.getElementById("planBarCleared").style.width=(cleared/target*100)+"%";
     document.getElementById("planBarPlanned").style.width=((cleared+plannedUnits)/target*100)+"%";
-    document.getElementById("planCleared").textContent=total.completed;
-    document.getElementById("planPlanned").textContent=total.scheduled;
+    var clearedStop=target?cleared/target*100:0,plannedStop=target?(cleared+plannedUnits)/target*100:0;
+    var clearedLabel=document.getElementById("planCleared"),plannedLabel=document.getElementById("planPlanned");
+    clearedLabel.textContent=cleared;clearedLabel.style.left=Math.max(2,Math.min(98,clearedStop))+"%";
+    plannedLabel.textContent=cleared+plannedUnits;plannedLabel.hidden=plannedUnits===0;plannedLabel.style.left=Math.max(2,Math.min(98,plannedStop))+"%";
     document.getElementById("planRemaining").textContent=total.remaining+" units to go";
     document.getElementById("planTarget").textContent=target;
     var full=cleared+plannedUnits>=target;

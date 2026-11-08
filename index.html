@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Focus Area Explorer</title>
   <meta name="description" content="Drag NUS CS focus areas onto a canvas to build a self-relayering AY2026-27 prerequisite tree and see where areas share modules.">
-  <link rel="stylesheet" href="css/styles.css?v=20261135">
+  <link rel="stylesheet" href="css/styles.css?v=20261136">
 </head>
 <body>
   <div class="wrap">
@@ -78,16 +78,18 @@
           <input id="planCode" type="search" aria-label="Search modules by code or name" aria-controls="planSearchResults" autocomplete="off" required>
           <ul class="plan-search-results" id="planSearchResults" aria-label="Module search results" hidden></ul>
         </form>
-        <div class="planner-summary" id="planSummary" aria-live="polite"></div>
       </div>
       <div class="plan-progress-block">
         <div class="plan-progress-head">
-          <span class="plan-progress-key"><span class="key-cleared"><i></i><b id="planCleared">0</b> cleared</span><span class="key-planned"><i></i><b id="planPlanned">0</b> planned</span></span>
           <span class="plan-progress-remaining" id="planRemaining">160 units to go</span>
         </div>
         <div class="plan-progress-row">
-          <div class="plan-progress" id="planProgress" role="progressbar" aria-label="Cleared and planned units" aria-valuemin="0" aria-valuemax="160" aria-valuenow="0">
-            <i class="plan-progress-cleared" id="planBarCleared"></i><i class="plan-progress-planned" id="planBarPlanned"></i>
+          <div class="plan-progress-holder">
+            <span class="plan-progress-stop stop-cleared" id="planCleared">0</span>
+            <span class="plan-progress-stop stop-planned" id="planPlanned">0</span>
+            <div class="plan-progress" id="planProgress" role="progressbar" aria-label="Cleared and planned units" aria-valuemin="0" aria-valuemax="160" aria-valuenow="0">
+              <i class="plan-progress-cleared" id="planBarCleared"></i><i class="plan-progress-planned" id="planBarPlanned"></i>
+            </div>
           </div>
           <span class="plan-progress-target" id="planTarget">160</span>
         </div>
@@ -102,9 +104,9 @@
     </section>
   </div>
 
-  <script src="js/data.js?v=20261135"></script>
-  <script src="js/app.js?v=20261135"></script>
-  <script src="js/planner-core.js?v=20261135"></script>
-  <script src="js/planner.js?v=20261135"></script>
+  <script src="js/data.js?v=20261136"></script>
+  <script src="js/app.js?v=20261136"></script>
+  <script src="js/planner-core.js?v=20261136"></script>
+  <script src="js/planner.js?v=20261136"></script>
 </body>
 </html>
