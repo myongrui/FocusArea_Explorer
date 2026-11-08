@@ -1,0 +1,36 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "js/**"
+      - "tools/**"
+      - "index.html"
+      - "package.json"
+  pull_request:
+    paths:
+      - "js/**"
+      - "tools/**"
+      - "index.html"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Run unit + data integrity tests
+        run: npm test

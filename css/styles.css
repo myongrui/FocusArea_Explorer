@@ -269,7 +269,10 @@ footer .kb{font-family:ui-monospace,Menlo,Consolas,monospace; background:var(--s
 .planner-status{font-size:12px; margin:0 0 18px; color:var(--ink2)}
 .planner-status:empty{display:none}
 .plan-confetti{position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:9999}
-.planner-timeline{overflow-x:auto; margin-top:4px; padding:2px 0 14px; scrollbar-gutter:stable; overscroll-behavior-x:contain}
+.planner-timeline{overflow-x:auto; margin-top:4px; padding:2px 0 10px; scrollbar-gutter:stable; overscroll-behavior-x:contain; scrollbar-width:thin; scrollbar-color:var(--base) transparent; -ms-overflow-style:auto}
+.planner-timeline::-webkit-scrollbar{display:block; height:8px; width:8px}
+.planner-timeline::-webkit-scrollbar-track{background:var(--plane); border-radius:4px}
+.planner-timeline::-webkit-scrollbar-thumb{background:var(--base); border-radius:4px}
 .planner-timeline:focus-visible{outline:2px solid var(--a-algo); outline-offset:3px}
 .planner-semesters{display:flex; align-items:stretch; gap:14px; width:max-content; min-width:100%}
 .plan-year{flex:0 0 560px; width:560px; border:1px solid var(--border); border-top:3px solid var(--a-algo); border-radius:8px; background:color-mix(in srgb,var(--a-algo) 4%,var(--plane)); padding:12px}
@@ -369,13 +372,19 @@ footer .kb{font-family:ui-monospace,Menlo,Consolas,monospace; background:var(--s
 .plan-card.merge-target{outline:2px dashed var(--a-algo); outline-offset:-2px}
 .plan-group{position:relative; border-color:color-mix(in srgb,var(--a-algo) 45%,var(--border))}
 .plan-group::after{content:""; position:absolute; top:0; bottom:0; left:50%; border-left:1px dotted var(--base); transform:translateX(-50%); pointer-events:none}
-.plan-group-choices{position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); margin:4px 0; border:1px solid var(--border); border-radius:6px; overflow:hidden}
-.plan-alt{font:inherit; font-size:10px; font-weight:600; color:var(--muted); background:var(--surface); border:0; padding:5px 6px; text-align:center; cursor:grab}
-.plan-alt+.plan-alt{border-left:1px dotted var(--base)}
-.plan-group-choices.two .plan-alt+.plan-alt{border-left:0}
-.plan-alt:nth-child(n+3){border-top:1px solid var(--border)}
-.plan-alt:hover{color:var(--ink); background:color-mix(in srgb,var(--a-algo) 7%,var(--surface))}
-.plan-alt.selected{color:var(--a-algo); background:color-mix(in srgb,var(--a-algo) 9%,var(--surface))}
+.plan-group{position:relative; padding:8px 10px; border-color:color-mix(in srgb,var(--a-algo) 45%,var(--border))}
+.plan-group::after{content:""; position:absolute; top:0; bottom:0; left:50%; border-left:1px dotted var(--base); transform:translateX(-50%); pointer-events:none}
+.plan-group-choices{position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); margin:0; border:0; border-radius:0; overflow:visible}
+.plan-alt{display:flex; flex-direction:column; gap:2px; min-width:0; padding:4px 7px 3px; font:inherit; color:var(--muted); background:transparent; border:0; border-radius:6px; cursor:grab}
+.plan-alt.left{align-items:flex-start; text-align:left; padding-right:12px}
+.plan-alt.right{align-items:flex-end; text-align:right; padding-left:12px}
+.plan-alt:hover{background:color-mix(in srgb,var(--a-algo) 7%,transparent)}
+.plan-alt.selected{background:color-mix(in srgb,var(--a-algo) 9%,transparent)}
+.plan-alt-code{font-size:11px; font-weight:700; color:var(--ink)}
+.plan-alt.selected .plan-alt-code{color:var(--a-algo)}
+.plan-alt-title{font-size:9px; line-height:1.25; color:var(--ink2); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.plan-alt-units{font-size:8.5px; font-style:normal; color:var(--muted)}
+.plan-group-remove{position:absolute; top:2px; left:50%; transform:translateX(-50%); z-index:2; background:var(--panel); border-radius:4px; font-size:12px; line-height:1}
 
 .plan-focus-child{margin-top:5px; min-width:0}
 .plan-focus-heading{font-size:8.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-bottom:2px}

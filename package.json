@@ -1,0 +1,12 @@
+{
+  "name": "fa-explorer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NUS CS Focus Area Explorer — prerequisite-tree graph and semester planner",
+  "scripts": {
+    "test": "node --test tools/test-graph.js tools/test-data.js tools/test-planner.js",
+    "test:graph": "node --test tools/test-graph.js",
+    "test:data": "node --test tools/test-data.js",
+    "test:planner": "node --test tools/test-planner.js"
+  }
+}

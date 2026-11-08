@@ -309,23 +309,25 @@
     var codes=group.codes.filter(function(c){return state.entries[c];});
     if(!codes.length) return null;
     if(codes.indexOf(group.selected)<0) group.selected=codes[0];
-    var selected=group.selected,m=state.entries[selected].module,problems=core.issues(selected,state);
+    var selected=group.selected,problems=core.issues(selected,state);
     var box=el("article","plan-card plan-group");box.draggable=true;box.dataset.group=group.id;decoratePlanCard(box,selected);
-    var top=el("div","plan-card-top"),remove=el("button","plan-remove","×");
+    var remove=el("button","plan-remove plan-group-remove","×");
     remove.type="button";remove.setAttribute("aria-label","Remove either/or group");
-    remove.addEventListener("click",function(){removeGroup(group);});
-    top.append(el("span",null,m.units+" units"),remove);
+    remove.addEventListener("click",function(e){e.stopPropagation();removeGroup(group);});
     var choices=el("div","plan-group-choices"+(codes.length===2?" two":""));
-    codes.forEach(function(code){
-      var button=el("button","plan-alt"+(code===selected?" selected":""),code);button.type="button";button.draggable=true;
-      button.title="Click to count this module; drag it out to separate";
-      button.addEventListener("click",function(e){e.stopPropagation();group.selected=code;save();});
-      button.addEventListener("dragstart",function(e){
+    codes.forEach(function(code,i){
+      var entry=state.entries[code],mod=entry.module;
+      var panel=el("button","plan-alt "+(i%2===0?"left":"right")+(code===selected?" selected":""));
+      panel.type="button";panel.draggable=true;panel.setAttribute("aria-pressed",String(code===selected));
+      panel.title="Click to count this module; drag it out to separate";
+      panel.append(el("b","plan-alt-code",code),el("span","plan-alt-title",mod.title),el("em","plan-alt-units",mod.units+" units"));
+      panel.addEventListener("click",function(e){e.stopPropagation();group.selected=code;save();});
+      panel.addEventListener("dragstart",function(e){
         e.stopPropagation();e.dataTransfer.setData("application/x-fa-separate",group.id);e.dataTransfer.setData("application/x-fa-module",code);e.dataTransfer.setData("text/plain",code);e.dataTransfer.effectAllowed="move";
       });
-      choices.appendChild(button);
+      choices.appendChild(panel);
     });
-    box.append(top,choices,el("div","plan-card-title",m.title));
+    box.append(choices,remove);
     problems.filter(function(p){return p.kind==="missing";}).forEach(function(p){box.appendChild(el("p","plan-check missing",p.text));});
     makeMergeTarget(box,selected);
     box.addEventListener("dragstart",function(e){e.dataTransfer.setData("application/x-fa-module",selected);e.dataTransfer.setData("text/plain",selected);e.dataTransfer.effectAllowed="move";});
@@ -391,9 +393,10 @@
       heading.appendChild(foundationLegend);
     }
     if(term>=0 && units>24) box.classList.add("overloaded");
-    if(term>=0 && entries.length && !special){
+    var timetableCodes=entries.filter(function(c){return core.isCounted(state,c)&&!state.entries[c].module.placeholder;});
+    if(term>=0 && timetableCodes.length && !special){
       var timetable=el("a",null,"Open timetable ↗");timetable.target="_blank";timetable.rel="noopener";
-      timetable.href="https://nusmods.com/timetable/sem-"+(term%4===2?2:1)+"/share?"+entries.filter(function(c){return core.isCounted(state,c);}).map(function(c){return encodeURIComponent(c)+"=";}).join("&");
+      timetable.href="https://nusmods.com/timetable/sem-"+(term%4===2?2:1)+"/share?"+timetableCodes.map(function(c){return encodeURIComponent(c)+"=";}).join("&");
       timetable.title="Choose lesson slots in NUSMods; its timetable uses the currently available academic year";heading.appendChild(timetable);
     }
     box.appendChild(heading);
@@ -461,16 +464,17 @@
     codeInput.setAttribute("aria-label","Search modules by code or name — press Enter to add to "+label(addTo));
     codeInput.setAttribute("aria-controls","planSearchResults");
     var total=core.totals(state);
-    var target=state.target,cleared=Math.min(target,total.completed),plannedUnits=Math.min(target-cleared,total.scheduled);
-    var progress=document.getElementById("planProgress");progress.setAttribute("aria-valuenow",String(cleared+plannedUnits));progress.setAttribute("aria-valuemax",String(target));
+    var target=state.target,actualCleared=total.completed,actualPlanned=total.completed+total.scheduled;
+    var cleared=Math.min(target,actualCleared),plannedUnits=Math.min(target-cleared,total.scheduled);
+    var progress=document.getElementById("planProgress");progress.setAttribute("aria-valuenow",String(actualCleared+total.scheduled));progress.setAttribute("aria-valuemax",String(target));
     document.getElementById("planBarCleared").style.width=(cleared/target*100)+"%";
     document.getElementById("planBarPlanned").style.width=((cleared+plannedUnits)/target*100)+"%";
-    var clearedStop=target?cleared/target*100:0,plannedStop=target?(cleared+plannedUnits)/target*100:0;
+    var clearedStop=target?actualCleared/target*100:0,plannedStop=target?actualPlanned/target*100:0;
     var clearedLabel=document.getElementById("planCleared"),plannedLabel=document.getElementById("planPlanned");
     clearedLabel.style.left=Math.max(2,Math.min(98,clearedStop))+"%";
-    plannedLabel.hidden=plannedUnits===0;plannedLabel.style.left=Math.max(2,Math.min(98,plannedStop))+"%";
-    var targetLabel=document.getElementById("planTarget");targetLabel.textContent=target;targetLabel.classList.toggle("hide",Math.max(clearedStop,plannedStop)>=90);animateProgress(cleared,cleared+plannedUnits);
-    var full=cleared>=target;
+    plannedLabel.hidden=actualPlanned<=actualCleared;plannedLabel.style.left=Math.max(2,Math.min(98,plannedStop))+"%";
+    var targetLabel=document.getElementById("planTarget");targetLabel.textContent=target;targetLabel.classList.toggle("hide",Math.max(clearedStop,plannedStop)>=90);animateProgress(actualCleared,actualPlanned);
+    var full=actualCleared>=target;
     if(full&&performance.now()-lastCelebration>2200){lastCelebration=performance.now();celebrate();}
     var shortAreas={algo:"Algo",ai:"AI",pl:"PL",se:"SE",graphics:"Graphics",security:"Security",database:"DB",hci:"HCI",mir:"MIR",network:"Network",parallel:"Parallel"};
     var pillarWrap=document.getElementById("planPillars");pillarWrap.replaceChildren();
