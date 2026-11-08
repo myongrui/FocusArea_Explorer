@@ -392,8 +392,15 @@
     [[total.completed,"earned"],[total.doing,"in progress"],[total.scheduled-total.doing,"scheduled"],[total.unplanned,"unplanned"],[total.remaining,"still to plan"]].forEach(function(pair){
       var item=el("span");item.append(el("b",null,pair[0]),document.createTextNode(pair[1]));summary.appendChild(item);
     });
-    var progress=document.getElementById("planProgress");progress.max=state.target;progress.value=Math.min(state.target,total.completed);
-    var full=progress.value>=state.target;
+    var target=state.target,cleared=Math.min(target,total.completed),plannedUnits=Math.min(target-cleared,total.scheduled);
+    var progress=document.getElementById("planProgress");progress.setAttribute("aria-valuenow",String(cleared+plannedUnits));progress.setAttribute("aria-valuemax",String(target));
+    document.getElementById("planBarCleared").style.width=(cleared/target*100)+"%";
+    document.getElementById("planBarPlanned").style.width=((cleared+plannedUnits)/target*100)+"%";
+    document.getElementById("planCleared").textContent=total.completed;
+    document.getElementById("planPlanned").textContent=total.scheduled;
+    document.getElementById("planRemaining").textContent=total.remaining+" units to go";
+    document.getElementById("planTarget").textContent=target;
+    var full=cleared+plannedUnits>=target;
     if(wasFull===null) wasFull=full;
     else if(full&&!wasFull){wasFull=true;celebrate();}
     else if(!full) wasFull=false;

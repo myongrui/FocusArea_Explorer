@@ -240,7 +240,21 @@ footer .kb{font-family:ui-monospace,Menlo,Consolas,monospace; background:var(--s
 .planner input:focus-visible,.planner button:focus-visible{outline:2px solid var(--a-algo); outline-offset:2px}
 .planner-summary{display:flex; gap:12px 24px; flex-wrap:wrap; font-size:12px; color:var(--ink2)}
 .planner-summary b{font-size:21px; color:var(--ink); margin-right:4px}
-.planner progress{width:100%; height:8px; accent-color:var(--a-se); margin-top:10px}
+.plan-progress-block{margin-top:10px}
+.plan-progress-head{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:10px; color:var(--muted); margin-bottom:4px}
+.plan-progress-key{display:flex; align-items:center; gap:12px}
+.plan-progress-key span{display:inline-flex; align-items:center; gap:4px}
+.plan-progress-key i{width:7px; height:7px; border-radius:2px; display:inline-block}
+.key-cleared i{background:var(--a-se)}
+.key-planned i{background:var(--a-algo)}
+.plan-progress-key b{color:var(--ink); font-size:11px}
+.plan-progress-remaining{font-variant-numeric:tabular-nums}
+.plan-progress-row{display:flex; align-items:center; gap:8px}
+.plan-progress{position:relative; flex:1; height:12px; overflow:hidden; border-radius:6px; background:color-mix(in srgb,var(--a-algo) 12%,var(--plane))}
+.plan-progress i{position:absolute; top:0; bottom:0; transition:width .25s ease}
+.plan-progress-cleared{left:0; background:var(--a-se); z-index:1}
+.plan-progress-planned{left:0; background:var(--a-algo); opacity:.55; z-index:0}
+.plan-progress-target{font-size:10px; color:var(--muted); font-variant-numeric:tabular-nums}
 .planner-search{position:relative; display:flex; align-items:center; gap:8px; flex:1; max-width:360px; min-width:200px; padding:0 10px; border:1px solid var(--border); border-radius:7px; background:var(--surface); color:var(--muted)}
 .planner-search input{flex:1; width:100%; border:0; background:transparent; padding:8px 0}
 .planner-search:focus-within{outline:2px solid var(--a-algo); outline-offset:2px}

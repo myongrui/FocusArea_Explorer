@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Focus Area Explorer</title>
   <meta name="description" content="Drag NUS CS focus areas onto a canvas to build a self-relayering AY2026-27 prerequisite tree and see where areas share modules.">
-  <link rel="stylesheet" href="css/styles.css?v=20261133">
+  <link rel="stylesheet" href="css/styles.css?v=20261135">
 </head>
 <body>
   <div class="wrap">
@@ -80,7 +80,18 @@
         </form>
         <div class="planner-summary" id="planSummary" aria-live="polite"></div>
       </div>
-      <progress id="planProgress" max="160" value="0" aria-label="Cleared units"></progress>
+      <div class="plan-progress-block">
+        <div class="plan-progress-head">
+          <span class="plan-progress-key"><span class="key-cleared"><i></i><b id="planCleared">0</b> cleared</span><span class="key-planned"><i></i><b id="planPlanned">0</b> planned</span></span>
+          <span class="plan-progress-remaining" id="planRemaining">160 units to go</span>
+        </div>
+        <div class="plan-progress-row">
+          <div class="plan-progress" id="planProgress" role="progressbar" aria-label="Cleared and planned units" aria-valuemin="0" aria-valuemax="160" aria-valuenow="0">
+            <i class="plan-progress-cleared" id="planBarCleared"></i><i class="plan-progress-planned" id="planBarPlanned"></i>
+          </div>
+          <span class="plan-progress-target" id="planTarget">160</span>
+        </div>
+      </div>
       <div class="plan-pillars" id="planPillars" aria-label="Degree pillar progress"></div>
       <p class="planner-status" id="plannerStatus" role="status"></p>
       <div class="planner-timeline" tabindex="0" role="region" aria-label="Academic years — scroll horizontally to view later semesters">
@@ -91,9 +102,9 @@
     </section>
   </div>
 
-  <script src="js/data.js?v=20261133"></script>
-  <script src="js/app.js?v=20261133"></script>
-  <script src="js/planner-core.js?v=20261133"></script>
-  <script src="js/planner.js?v=20261133"></script>
+  <script src="js/data.js?v=20261135"></script>
+  <script src="js/app.js?v=20261135"></script>
+  <script src="js/planner-core.js?v=20261135"></script>
+  <script src="js/planner.js?v=20261135"></script>
 </body>
 </html>
