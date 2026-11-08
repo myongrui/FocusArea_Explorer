@@ -406,7 +406,7 @@
     });
     el.title="Hover to trace connections; click to pin or unpin; drag to the planner";
     var url="https://nusmods.com/courses/"+id;
-    el.innerHTML='<div class="row1"><span class="badge"></span>'+
+    el.innerHTML='<span class="rail"><i></i></span><div class="row1"><span class="badges"><i class="badge"></i></span>'+
       '<a class="code" href="'+url+'" target="_blank" rel="noopener">'+id+'</a>'+
       '<span class="role"></span></div>'+
       '<div class="ttl">'+n.t+'</div>';
@@ -433,6 +433,17 @@
     setTimeout(function(){ el.classList.remove("new"); }, 360);
   }
 
+  // One solid swatch per focus area, so a module that counts toward several
+  // areas shows each colour distinctly instead of a blended dot.
+  function setSwatches(wrap, cols){
+    if(!wrap) return;
+    while(wrap.children.length<cols.length) wrap.appendChild(document.createElement("i"));
+    while(wrap.children.length>cols.length) wrap.removeChild(wrap.lastChild);
+    for(var i=0;i<cols.length;i++) wrap.children[i].style.background=cols[i]||"";
+  }
+  function setBadges(el, cols){ setSwatches(el.querySelector(".badges"), cols); }
+  function setRail(el, cols){ setSwatches(el.querySelector(".rail"), cols); }
+
   function styleNode(id){
     var el=nodeEls[id]; if(!el) return;
     var r=roleOf(id);
@@ -440,6 +451,7 @@
     el.classList.toggle("completed",completed.has(id));
     el.classList.toggle("inprogress",inProgress.has(id));
     el.style.removeProperty("--c"); el.style.removeProperty("--grad");
+    setBadges(el, [""]);
     var roleEl=el.querySelector(".role");
     if(r.k==="fnd"){ el.classList.add("k-fnd"); roleEl.textContent="CORE"; }
     else if(r.k==="support"){ el.classList.add("k-support"); roleEl.textContent="SUPPORT"; }
@@ -447,10 +459,11 @@
     else {
       el.classList.add("k-shared");
       var cols=r.areas.map(areaColor);
-      var stops=cols.map(function(c,i){ var a=Math.round(i/cols.length*100), b=Math.round((i+1)/cols.length*100); return c+" "+a+"%, "+c+" "+b+"%"; }).join(", ");
-      el.style.setProperty("--grad","linear-gradient(180deg, "+stops+")");
       el.style.setProperty("--c", cols[0]);
+      setBadges(el, cols);
+      setRail(el, cols);
       roleEl.textContent=r.areas.length+" AREAS";
+      roleEl.title=r.areas.map(function(k){return areaByKey[k].name;}).join(" + ");
     }
     if(completed.has(id)) roleEl.textContent="DONE";
     else if(inProgress.has(id)) roleEl.textContent="DOING";
