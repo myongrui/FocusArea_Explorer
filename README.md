@@ -16,8 +16,9 @@ academic year **2026–2027**
 
 ## Planner
 
-Heavily influenced by NUSMods with some additional features! you can import and export
-see what happens when you complete all units and are eligible for grad!
+Heavily influenced by NUSMods with some additional features! you can import and export your planner
+from the NUSMods and keep planning here see what happens when you complete all units and are eligible 
+for grad! For poly students, you can indicate the 20 UE brought over. 
 
 ## Why this exists
 
@@ -27,4 +28,7 @@ in one place with easy references to NUS Mods.
 
 ## How this was made
 Entirely vibe coded but its delivered entirely in one static page which is neat for github pages. (yay free domain)
+
+## Contribution
+If you wish to add any functionality open up a PR and keep it concise.
 
