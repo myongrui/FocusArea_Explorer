@@ -441,7 +441,10 @@
     while(wrap.children.length>cols.length) wrap.removeChild(wrap.lastChild);
     for(var i=0;i<cols.length;i++) wrap.children[i].style.background=cols[i]||"";
   }
-  function setBadges(el, cols){ setSwatches(el.querySelector(".badges"), cols); }
+  function setBadges(el, cols){
+    var wrap=el.querySelector(".badges");setSwatches(wrap, cols);
+    if(wrap) Array.prototype.forEach.call(wrap.children,function(child){child.classList.add("badge");});
+  }
   function setRail(el, cols){ setSwatches(el.querySelector(".rail"), cols); }
 
   function styleNode(id){
